@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Навчальний симулятор для школярів: чинники економічної безпеки підприємства, оцінка загроз і результат — зона ризику чи зона безпеки.">
+<title>Симулятор економічної безпеки</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap">
+<style>
+/* Концепція: службова «панель черговго»: спокійні холодні нейтралі, один синій акцент, зелений/червоний лише для зон ризику. */
+:root{
+  --bg:#F4F7FA; --surface:#FFFFFF; --ink:#12202F; --muted:#556577; --line:#D5DEE7; --soft:#EAF0F6;
+  --accent:#1F5FBF; --accent-ink:#FFFFFF;
+  --safe:#19803D; --safe-bg:#E3F4E8; --warn:#8F5200; --warn-bg:#FFF0D6; --risk:#C0272D; --risk-bg:#FDE5E5;
+  --f-body:'Onest',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-disp:'Unbounded','Onest',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1620; --surface:#16222F; --ink:#E6EDF4; --muted:#9DB0C2; --line:#2A3B4C; --soft:#1C2B3A;
+  --accent:#6EA3F5; --accent-ink:#0E1620;
+  --safe:#5CD184; --safe-bg:#15301F; --warn:#F0B357; --warn-bg:#3A2A0E; --risk:#FF8A8A; --risk-bg:#3B1618; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1620; --surface:#16222F; --ink:#E6EDF4; --muted:#9DB0C2; --line:#2A3B4C; --soft:#1C2B3A;
+  --accent:#6EA3F5; --accent-ink:#0E1620;
+  --safe:#5CD184; --safe-bg:#15301F; --warn:#F0B357; --warn-bg:#3A2A0E; --risk:#FF8A8A; --risk-bg:#3B1618; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-family:var(--f-disp);font-weight:600;font-size:clamp(1.35rem,4.2vw,2rem);line-height:1.2;letter-spacing:-.01em}
+h2{font-family:var(--f-disp);font-weight:500;font-size:1.15rem;line-height:1.3}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.lead{color:var(--muted);max-width:65ch}
+header{display:flex;flex-direction:column;gap:6px}
+.kicker{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* вкладки */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.tab .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--soft);font-size:.8rem}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tab[aria-selected="true"] .n{background:rgba(255,255,255,.22);color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.live{display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-weight:700;font-size:.85rem;white-space:nowrap}
+.chip.safe{background:var(--safe-bg);color:var(--safe)}
+.chip.risk{background:var(--risk-bg);color:var(--risk)}
+.chip.mid{background:var(--warn-bg);color:var(--warn)}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+
+.panel{display:flex;flex-direction:column;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.def{border-left:4px solid var(--accent);border-radius:4px 14px 14px 4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:14px}
+.comp{display:flex;flex-direction:column;gap:10px;min-width:0}
+.comp .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.weight{font-family:var(--f-disp);font-size:1.25rem;color:var(--accent);font-weight:600}
+.wbar{height:6px;border-radius:3px;background:var(--soft);overflow:hidden}
+.wbar i{display:block;height:100%;background:var(--accent)}
+.small{font-size:.9rem;color:var(--muted)}
+ul.plain{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+ul.plain li{display:flex;gap:8px;align-items:baseline}
+ul.plain li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translateY(-2px)}
+.ex{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:.92rem}
+.ex b{font-weight:600}
+.btn{font:inherit;font-weight:600;border:0;background:var(--accent);color:var(--accent-ink);padding:11px 18px;border-radius:10px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.row-end{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+/* вкладка 2 */
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.presets input{position:absolute;opacity:0;pointer-events:none}
+.presets label{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600;font-size:.92rem}
+.presets input:checked+label{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.presets input:focus-visible+label{outline:3px solid var(--accent);outline-offset:2px}
+.scale{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;font-size:.9rem}
+.scale div{background:var(--soft);border-radius:10px;padding:10px 12px}
+.group{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ghead{display:flex;justify-content:space-between;gap:10px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:8px}
+.threat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;align-items:start;padding-top:4px}
+.threat+.threat{border-top:1px dashed var(--line);padding-top:12px}
+.tname{font-weight:600}
+details{margin-top:4px}
+details summary{cursor:pointer;color:var(--accent);font-size:.88rem;width:max-content}
+details p{font-size:.9rem;color:var(--muted);margin-top:4px}
+.controls{display:flex;flex-direction:column;gap:8px;min-width:0}
+.seg{display:flex;flex-direction:column;gap:3px}
+.seg .lab{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.seg .opts{display:flex;gap:4px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{flex:1;text-align:center;border:1px solid var(--line);background:var(--surface);padding:6px 8px;border-radius:8px;cursor:pointer;font-size:.82rem;line-height:1.2;min-width:78px}
+.seg label b{display:block;font-size:1rem}
+.seg input:checked+label{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.seg input:focus-visible+label{outline:3px solid var(--accent);outline-offset:2px}
+.score{grid-column:1/-1;display:flex;gap:8px;align-items:center;font-size:.9rem;color:var(--muted)}
+@media (max-width:640px){.threat{grid-template-columns:1fr}.seg label{min-width:0}}
+
+/* вкладка 3 */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center}
+@media (max-width:720px){.hero{grid-template-columns:1fr}}
+.gauge{width:100%;max-width:340px;margin:0 auto;display:block}
+.verdict{display:flex;flex-direction:column;gap:10px}
+.bigzone{font-family:var(--f-disp);font-size:clamp(1.3rem,4vw,1.8rem);font-weight:600;line-height:1.2}
+.bigzone.safe{color:var(--safe)}.bigzone.risk{color:var(--risk)}
+.note{border-radius:10px;padding:10px 12px;font-size:.93rem}
+.note.warn{background:var(--warn-bg);color:var(--warn)}
+.note.info{background:var(--soft)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.radar{width:100%;max-width:440px;margin:0 auto;display:block}
+.crow{display:grid;grid-template-columns:minmax(0,1fr) 54px;gap:4px 10px;align-items:center}
+.crow .t{display:flex;justify-content:space-between;gap:8px;font-size:.93rem}
+.crow .v{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.meter{grid-column:1/-1;height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+.meter i{display:block;height:100%}
+.ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:t}
+.ol li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px}
+.ol li::before{counter-increment:t;content:counter(t);display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--risk-bg);color:var(--risk);font-weight:700}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+td.num{font-variant-numeric:tabular-nums;font-weight:700}
+.tw{overflow-x:auto}
+.foot{font-size:.85rem;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.needle{transition:transform .5s ease}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="kicker">Профорієнтація · Економіка · Економічна безпека підприємства</span>
+    <h1>Симулятор економічної безпеки</h1>
+    <p class="lead">Ви працюєте в службі економічної безпеки. Вивчіть, з чого складається безпека підприємства, оцініть загрози й дізнайтеся, у якій зоні опинилося підприємство.</p>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="tablist" aria-label="Етапи симулятора">
+      <button class="tab" role="tab" id="tab-factors" aria-controls="p-factors" aria-selected="true"><span class="n">1</span>Чинники</button>
+      <button class="tab" role="tab" id="tab-threats" aria-controls="p-threats" aria-selected="false"><span class="n">2</span>Загрози</button>
+      <button class="tab" role="tab" id="tab-result" aria-controls="p-result" aria-selected="false"><span class="n">3</span>Результат</button>
+    </div>
+    <div class="live" aria-live="polite"><span>Зараз:</span><span id="liveChip" class="chip mid">…</span></div>
+  </div>
+
+  <!-- ВКЛАДКА 1 -->
+  <section class="panel" id="p-factors" role="tabpanel" aria-labelledby="tab-factors">
+    <div class="card def">
+      <h2>Що таке економічна безпека підприємства</h2>
+      <p style="margin-top:8px;max-width:70ch">Це стан, коли підприємство захищене від внутрішніх і зовнішніх загроз і може стабільно працювати та розвиватися. Вона складається з шести складових. Вага показує, наскільки складова впливає на стійкість підприємства: чим більша вага, тим дорожче обходиться слабкість у цій сфері.</p>
+    </div>
+    <div class="grid" id="factorGrid"></div>
+    <div class="row-end"><button class="btn" data-go="threats">Далі: оцінити загрози →</button></div>
+  </section>
+
+  <!-- ВКЛАДКА 2 -->
+  <section class="panel" id="p-threats" role="tabpanel" aria-labelledby="tab-threats" hidden>
+    <div class="card">
+      <h2>Оберіть підприємство або задайте власні оцінки</h2>
+      <p class="small" style="margin:6px 0 12px">Готові набори вже містять оцінки. Їх можна змінювати повзунками нижче й одразу бачити результат.</p>
+      <div class="presets" id="presets" role="radiogroup" aria-label="Підприємство"></div>
+      <p class="small" id="presetNote" style="margin-top:10px"></p>
+    </div>
+    <div class="scale">
+      <div><b>Ймовірність</b><br>1 — малоймовірно · 2 — можливо · 3 — дуже ймовірно</div>
+      <div><b>Наслідки</b><br>1 — незначні · 2 — відчутні · 3 — критичні</div>
+    </div>
+    <div class="panel" id="threatGroups"></div>
+    <div class="row-end">
+      <button class="btn ghost" data-go="factors">← Назад</button>
+      <button class="btn" data-go="result">Показати результат →</button>
+    </div>
+  </section>
+
+  <!-- ВКЛАДКА 3 -->
+  <section class="panel" id="p-result" role="tabpanel" aria-labelledby="tab-result" hidden>
+    <div class="card hero">
+      <svg class="gauge" id="gauge" viewBox="0 0 260 160" role="img" aria-label="Шкала ризику"></svg>
+      <div class="verdict">
+        <span class="kicker" id="rName"></span>
+        <div class="bigzone" id="rZone"></div>
+        <p id="rText"></p>
+        <div id="rBanner"></div>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h2>Ризик за складовими</h2>
+        <svg class="radar" id="radar" viewBox="0 0 480 340" role="img" aria-label="Пелюсткова діаграма ризику за складовими"></svg>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:12px">
+        <h2>Складові та їхня вага</h2>
+        <div id="compRows" style="display:flex;flex-direction:column;gap:12px"></div>
+        <p class="small">Позначка «критично» з’являється, коли ризик складової від 67%.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom:12px">Три найнебезпечніші загрози та що з ними робити</h2>
+      <ol class="ol" id="topThreats"></ol>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom:10px">Порівняйте з іншими підприємствами</h2>
+      <div class="tw"><table id="cmp"></table></div>
+    </div>
+
+    <div class="card def">
+      <h2>Так працює економіст із безпеки підприємства</h2>
+      <p style="margin-top:8px;max-width:70ch">Фахівець робить те саме, що ви щойно зробили: знаходить загрози, оцінює їхню ймовірність і наслідки та пропонує, як зменшити ризик. Для цього потрібні логіка, уважність до цифр і вміння розуміти людей. Такі спеціалісти працюють у службах економічної безпеки підприємств, відділах внутрішнього аудиту та комплаєнсу, банках і консалтингових компаніях.</p>
+      <p style="margin-top:8px"><b>Спеціальність «Економіка», спеціалізація «Економічна безпека підприємства».</b></p>
+    </div>
+    <div class="row-end">
+      <button class="btn ghost" data-go="threats">← Змінити оцінки</button>
+      <button class="btn" id="restart">Пройти знову</button>
+    </div>
+    <p class="foot">Це навчальна модель для знайомства з професією. Вона не замінює реальну оцінку економічної безпеки підприємства.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+var COMPS=[
+ {id:'fin',name:'Фінансова',short:'Фінансова',w:25,scope:'Гроші та платоспроможність підприємства.',
+  factors:['Рівень виручки й прибутку','Борги та кредити','Курси валют та інфляція'],
+  ex:'У «Смачного Дому» клієнт не заплатив за велике замовлення, і не вистачає грошей на зарплату.'},
+ {id:'mar',name:'Ринкова',short:'Ринкова',w:20,scope:'Клієнти, попит і конкуренція.',
+  factors:['Попит на продукцію','Ціни та дії конкурентів','Репутація й довіра клієнтів'],
+  ex:'Поруч відкрилась мережа з нижчими цінами, і покупців стало менше.'},
+ {id:'hr',name:'Кадрова',short:'Кадрова',w:15,scope:'Люди в команді та їхня чесність.',
+  factors:['Кваліфікація працівників','Плинність кадрів','Чесність і лояльність команди'],
+  ex:'Головний пекар перейшов до конкурента й забрав рецепти.'},
+ {id:'prod',name:'Виробничо-логістична',short:'Виробнича',w:15,scope:'Виробництво, склад і постачання.',
+  factors:['Стан обладнання','Надійність постачальників','Запаси на складі'],
+  ex:'Зламалась піч, а постачальник затримав борошно.'},
+ {id:'inf',name:'Інформаційна та цифрова',short:'Інформаційна',w:15,scope:'Дані, сайти й програми підприємства.',
+  factors:['Захист даних клієнтів','Кіберзагрози','Стійкість програм обліку'],
+  ex:'Хакери зламали сайт замовлень і вкрали базу клієнтів.'},
+ {id:'leg',name:'Правова та безпекова',short:'Правова',w:10,scope:'Закони, договори й фізична безпека.',
+  factors:['Дотримання вимог закону','Надійність договорів і контрагентів','Фізична безпека та воєнні ризики'],
+  ex:'Перевірка виявила порушення, а обстріл залишив пекарню без світла.'}
+];
+var T=[
+ {c:0,n:'Затримка оплати від клієнтів',ex:'Покупець тримає гроші тижнями, а рахунки треба сплачувати вчасно.',adv:'Просіть передоплату, перевіряйте надійність клієнтів, ведіть календар платежів.'},
+ {c:0,n:'Зростання цін на сировину та інфляція',ex:'Борошно, паливо та енергія подорожчали, а ціни на продукцію піднімати складно.',adv:'Тримайте запас сировини, працюйте з кількома постачальниками, закладайте гнучке ціноутворення.'},
+ {c:1,n:'Вихід на ринок сильного конкурента',ex:'Поруч відкривається велика мережа з низькими цінами.',adv:'Стежте за конкурентами, розвивайте унікальну пропозицію та лояльність клієнтів.'},
+ {c:1,n:'Негативні відгуки та втрата репутації',ex:'Скарга клієнта в соцмережах швидко поширюється.',adv:'Швидко реагуйте на скарги, контролюйте якість, спілкуйтеся з клієнтами чесно.'},
+ {c:2,n:'Відхід ключового працівника',ex:'Досвідчений спеціаліст іде до конкурента.',adv:'Документуйте процеси, готуйте заміну, мотивуйте цінних людей.'},
+ {c:2,n:'Нечесність або зловживання працівників',ex:'Працівник бере «відкат» від постачальника або виносить товар.',adv:'Розподіляйте повноваження, запровадьте правила чесності й регулярні перевірки операцій.'},
+ {c:3,n:'Поломка обладнання',ex:'Виробнича лінія зупинилась на кілька днів.',adv:'Плануйте обслуговування, майте запчастини й резервне обладнання.'},
+ {c:3,n:'Зрив поставок від постачальника',ex:'Єдиний постачальник не привіз сировину вчасно.',adv:'Працюйте щонайменше з двома постачальниками й тримайте страховий запас.'},
+ {c:4,n:'Кібератака або витік даних',ex:'Зламано пошту чи сайт, а дані клієнтів опинилися в мережі.',adv:'Використовуйте двофакторний вхід, оновлюйте програми, навчайте персонал кібергігієни.'},
+ {c:4,n:'Збій програм обліку й втрата даних',ex:'Програма обліку «зависла», а резервної копії немає.',adv:'Робіть резервні копії й регулярно перевіряйте, чи їх можна відновити.'},
+ {c:5,n:'Порушення вимог закону та штрафи',ex:'Перевірка виявила помилки в документах або договорах.',adv:'Стежте за змінами правил, перевіряйте договори й документи, консультуйтеся з юристом.'},
+ {c:5,n:'Фізична небезпека: обстріли, відключення світла',ex:'Без електрики зупиняється виробництво, а приміщення можуть бути пошкоджені.',adv:'Підготуйте укриття, резервне живлення, план евакуації та копії документів поза офісом.'}
+];
+// оцінки [ймовірність, наслідки] для 12 загроз
+var PRESETS=[
+ {id:'bakery',name:'Пекарня «Смачний Дім»',d:'Невелика пекарня з доставкою: гроші й постачання під тиском.',v:[[2,2],[3,2],[2,2],[2,2],[2,3],[1,2],[2,2],[3,2],[1,2],[2,1],[1,2],[3,2]]},
+ {id:'shop',name:'Інтернет-магазин одягу',d:'Сильна залежність від сайту, конкуренції та даних клієнтів.',v:[[2,2],[2,1],[3,3],[2,2],[1,2],[1,2],[1,1],[2,2],[3,3],[2,2],[2,2],[1,1]]},
+ {id:'pharm',name:'Мережа аптек (стабільний бізнес)',d:'Передбачуваний попит і виважене управління.',v:[[1,2],[1,2],[1,2],[1,2],[1,2],[1,3],[1,1],[2,2],[2,2],[1,2],[2,2],[1,2]]},
+ {id:'build',name:'Будівельна фірма',d:'Загалом спокійно, але виробнича складова під критичним тиском.',v:[[1,2],[1,2],[1,2],[1,2],[1,2],[1,1],[3,3],[3,3],[1,1],[1,1],[2,2],[1,2]]},
+ {id:'own',name:'Моє підприємство',d:'Усі загрози стартують із середніх оцінок. Змінюйте їх на свій розсуд.',v:[[2,2],[2,2],[2,2],[2,2],[2,2],[2,2],[2,2],[2,2],[2,2],[2,2],[2,2],[2,2]]}
+];
+var LP=['малоймовірно','можливо','дуже ймовірно'], LI=['незначні','відчутні','критичні'];
+var THRESH=40, CRIT=6; // зона ризику від 40%; складова критична від середнього бала 6 із 9 (≈67%)
+var state={preset:'bakery',edited:false,vals:PRESETS[0].v.map(function(a){return a.slice()})};
+function $(s,r){return (r||document).querySelector(s)}
+function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e}
+function pct(x){return Math.round(x)}
+function calc(vals){
+  var comps=COMPS.map(function(c,ci){
+    var idx=[];T.forEach(function(t,i){if(t.c===ci)idx.push(i)});
+    var avg=idx.reduce(function(s,i){return s+vals[i][0]*vals[i][1]},0)/idx.length;
+    return {avg:avg,risk:avg/9*100,crit:avg>=CRIT};
+  });
+  var total=comps.reduce(function(s,c,i){return s+COMPS[i].w*c.risk/100},0);
+  var anyCrit=comps.some(function(c){return c.crit});
+  var zone=(total>=THRESH||anyCrit)?'risk':'safe';
+  return {comps:comps,total:total,zone:zone,anyCrit:anyCrit,byRisk:total>=THRESH};
+}
+function level(s){return s>=6?'risk':(s>=3?'mid':'safe')}
+function levelWord(s){return s>=6?'високий':(s>=3?'середній':'низький')}
+
+/* вкладка 1 */
+function renderFactors(){
+  var g=$('#factorGrid');g.innerHTML='';
+  COMPS.forEach(function(c){
+    var card=el('div','card comp');
+    card.innerHTML='<div class="top"><h3>'+c.name+'</h3><span class="weight">'+c.w+'%</span></div>'+
+     '<div class="wbar" aria-hidden="true"><i style="width:'+(c.w*4)+'%"></i></div>'+
+     '<p class="small">'+c.scope+'</p>'+
+     '<ul class="plain">'+c.factors.map(function(f){return '<li>'+f+'</li>'}).join('')+'</ul>'+
+     '<div class="ex"><b>Приклад.</b> '+c.ex+'</div>';
+    g.appendChild(card);
+  });
+}
+/* вкладка 2 */
+function renderPresets(){
+  var box=$('#presets');box.innerHTML='';
+  PRESETS.forEach(function(p){
+    var i=el('input');i.type='radio';i.name='preset';i.id='pr-'+p.id;i.value=p.id;i.checked=(p.id===state.preset);
+    var l=el('label',null,p.name);l.htmlFor=i.id;
+    i.addEventListener('change',function(){applyPreset(p.id)});
+    box.appendChild(i);box.appendChild(l);
+  });
+  updatePresetNote();
+}
+function updatePresetNote(){
+  var p=PRESETS.filter(function(x){return x.id===state.preset})[0];
+  $('#presetNote').textContent=p.d+(state.edited&&state.preset!=='own'?' Оцінки змінено вручну.':'');
+}
+function applyPreset(id){
+  var p=PRESETS.filter(function(x){return x.id===id})[0];
+  state.preset=id;state.edited=false;state.vals=p.v.map(function(a){return a.slice()});
+  syncControls();updatePresetNote();refresh();
+}
+function renderThreats(){
+  var root=$('#threatGroups');root.innerHTML='';
+  COMPS.forEach(function(c,ci){
+    var g=el('div','card group');
+    g.appendChild(el('div','ghead','<h3>'+c.name+'</h3><span class="small">вага '+c.w+'%</span>'));
+    T.forEach(function(t,i){
+      if(t.c!==ci)return;
+      var row=el('div','threat');
+      var left=el('div',null,'<div class="tname">'+t.n+'</div><details><summary>Приклад</summary><p>'+t.ex+'</p></details>');
+      var ctl=el('div','controls');
+      ctl.appendChild(seg(i,0,'Ймовірність',LP));
+      ctl.appendChild(seg(i,1,'Наслідки',LI));
+      var sc=el('div','score');sc.id='sc'+i;
+      row.appendChild(left);row.appendChild(ctl);row.appendChild(sc);
+      g.appendChild(row);
+    });
+    root.appendChild(g);
+  });
+}
+function seg(i,k,label,words){
+  var d=el('div','seg');d.appendChild(el('span','lab',label));
+  var o=el('div','opts');o.setAttribute('role','radiogroup');o.setAttribute('aria-label',label);
+  for(var v=1;v<=3;v++){
+    var inp=el('input');inp.type='radio';inp.name='t'+i+'k'+k;inp.id='t'+i+'k'+k+'v'+v;inp.value=v;
+    inp.addEventListener('change',(function(vv){return function(){
+      state.vals[i][k]=vv;state.edited=true;updatePresetNote();refresh();}})(v));
+    var l=el('label',null,'<b>'+v+'</b>'+words[v-1]);l.htmlFor=inp.id;
+    o.appendChild(inp);o.appendChild(l);
+  }
+  d.appendChild(o);return d;
+}
+function syncControls(){
+  T.forEach(function(t,i){
+    for(var k=0;k<2;k++){var r=document.getElementById('t'+i+'k'+k+'v'+state.vals[i][k]);if(r)r.checked=true}
+  });
+}
+function updateScores(){
+  T.forEach(function(t,i){
+    var s=state.vals[i][0]*state.vals[i][1];var e=document.getElementById('sc'+i);
+    e.innerHTML='Бал загрози: <span class="chip '+level(s)+'">'+s+' з 9 · '+levelWord(s)+'</span>';
+  });
+}
+/* вкладка 3 */
+function polar(cx,cy,r,deg){var a=deg*Math.PI/180;return [cx+r*Math.cos(a),cy-r*Math.sin(a)]}
+function drawGauge(total,zone){
+  var cx=130,cy=130,r=100,svg=$('#gauge');
+  function pt(p){return polar(cx,cy,r,180-p*1.8)}
+  function arc(a,b,color){var p1=pt(a),p2=pt(b);return '<path d="M'+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' A'+r+' '+r+' 0 0 1 '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+'" fill="none" stroke="'+color+'" stroke-width="22" stroke-linecap="butt"/>'}
+  var pos=pt(Math.max(0,Math.min(100,total)));
+  var mk=polar(cx,cy,r+18,180-THRESH*1.8), mk2=polar(cx,cy,r-18,180-THRESH*1.8);
+  var col=zone==='risk'?'var(--risk)':'var(--safe)';
+  svg.innerHTML=arc(0,THRESH,'var(--safe)')+arc(THRESH,100,'var(--risk)')+
+   '<line x1="'+mk[0].toFixed(1)+'" y1="'+mk[1].toFixed(1)+'" x2="'+mk2[0].toFixed(1)+'" y2="'+mk2[1].toFixed(1)+'" stroke="var(--ink)" stroke-width="2"/>'+
+   '<circle cx="'+pos[0].toFixed(1)+'" cy="'+pos[1].toFixed(1)+'" r="11" fill="var(--surface)" stroke="'+col+'" stroke-width="5"/>'+
+   '<text x="'+cx+'" y="'+(cy-22)+'" text-anchor="middle" font-family="Unbounded,Onest,sans-serif" font-size="34" font-weight="600" fill="var(--ink)">'+pct(total)+'%</text>'+
+   '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Onest,sans-serif">загальний ризик</text>'+
+   '<text x="30" y="154" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Onest,sans-serif">0%</text>'+
+   '<text x="230" y="154" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Onest,sans-serif">100%</text>'+
+   '<text x="'+(mk[0]+0).toFixed(1)+'" y="'+(mk[1]-6).toFixed(1)+'" text-anchor="middle" font-size="11" fill="var(--ink)" font-family="Onest,sans-serif">'+THRESH+'%</text>';
+}
+function drawRadar(res){
+  var cx=240,cy=170,R=100,n=COMPS.length,svg=$('#radar'),h='';
+  function P(i,r){return polar(cx,cy,r,90-i*360/n)}
+  [33,67,100].forEach(function(lv){
+    var pts=COMPS.map(function(_,i){var p=P(i,R*lv/100);return p[0].toFixed(1)+','+p[1].toFixed(1)}).join(' ');
+    h+='<polygon points="'+pts+'" fill="none" stroke="var(--line)" stroke-width="1"/>';
+  });
+  COMPS.forEach(function(_,i){var p=P(i,R);h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'" stroke="var(--line)"/>'});
+  var tp=COMPS.map(function(_,i){var p=P(i,R*THRESH/100);return p[0].toFixed(1)+','+p[1].toFixed(1)}).join(' ');
+  h+='<polygon points="'+tp+'" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>';
+  var col=res.zone==='risk'?'var(--risk)':'var(--safe)';
+  var pts=res.comps.map(function(c,i){var p=P(i,R*Math.max(c.risk,3)/100);return p[0].toFixed(1)+','+p[1].toFixed(1)}).join(' ');
+  h+='<polygon points="'+pts+'" fill="'+col+'" fill-opacity=".18" stroke="'+col+'" stroke-width="2.5" stroke-linejoin="round"/>';
+  res.comps.forEach(function(c,i){var p=P(i,R*Math.max(c.risk,3)/100);h+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="4" fill="'+(c.crit?'var(--risk)':col)+'"/>'});
+  COMPS.forEach(function(c,i){
+    var p=P(i,R+18),ang=90-i*360/n,anc='middle';
+    if(Math.cos(ang*Math.PI/180)>0.3)anc='start';else if(Math.cos(ang*Math.PI/180)<-0.3)anc='end';
+    var dy=(Math.sin(ang*Math.PI/180)>0.9)?-4:(Math.sin(ang*Math.PI/180)<-0.9?14:4);
+    h+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]+dy).toFixed(1)+'" text-anchor="'+anc+'" font-size="13" font-weight="600" fill="var(--ink)" font-family="Onest,sans-serif">'+c.short+'</text>';
+  });
+  h+='<text x="240" y="330" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Onest,sans-serif">Штрихова лінія — межа зони ризику ('+THRESH+'%). Кільця: 33%, 67%, 100%.</text>';
+  svg.innerHTML=h;
+}
+function renderResult(){
+  var res=calc(state.vals);
+  var p=PRESETS.filter(function(x){return x.id===state.preset})[0];
+  $('#rName').textContent=p.name+(state.edited&&state.preset!=='own'?' (змінено)':'');
+  var z=$('#rZone');z.className='bigzone '+res.zone;
+  z.textContent=res.zone==='risk'?'Зона ризику':'Зона безпеки';
+  $('#rText').textContent=res.zone==='risk'
+    ?'Загрози переважають над захищеністю. Службі економічної безпеки потрібно діяти: почніть із найнебезпечніших загроз нижче.'
+    :'Підприємство добре захищене, але безпека потребує постійного моніторингу: ситуація й загрози змінюються.';
+  var b=$('#rBanner');b.innerHTML='';
+  var crit=res.comps.map(function(c,i){return c.crit?COMPS[i].name:null}).filter(Boolean);
+  if(res.zone==='risk'&&!res.byRisk&&crit.length){
+    b.appendChild(el('div','note warn','<b>Правило слабкої ланки.</b> Загальний ризик нижчий за '+THRESH+'%, але складова «'+crit.join('», «')+'» перебуває на критичному рівні. Одна слабка ланка переводить підприємство в зону ризику.'));
+  }else if(crit.length){
+    b.appendChild(el('div','note warn','<b>Критичні складові:</b> '+crit.join(', ')+'.'));
+  }else{
+    b.appendChild(el('div','note info','Зона ризику починається від '+THRESH+'%. Жодна складова не досягла критичного рівня (67%).'));
+  }
+  drawGauge(res.total,res.zone);drawRadar(res);
+  var rows=$('#compRows');rows.innerHTML='';
+  res.comps.forEach(function(c,i){
+    var lv=c.risk>=67?'risk':(c.risk>=40?'mid':'safe');
+    var col=lv==='risk'?'var(--risk)':(lv==='mid'?'var(--warn)':'var(--safe)');
+    var r=el('div','crow');
+    r.innerHTML='<div class="t"><span>'+COMPS[i].name+' <span class="small">· вага '+COMPS[i].w+'%</span>'+(c.crit?' <span class="chip risk">критично</span>':'')+'</span></div><div class="v" style="color:'+col+'">'+pct(c.risk)+'%</div>'+
+      '<div class="meter" aria-hidden="true"><i style="width:'+pct(c.risk)+'%;background:'+col+'"></i></div>';
+    rows.appendChild(r);
+  });
+  var order=T.map(function(t,i){return i}).sort(function(a,b){
+    var sa=state.vals[a][0]*state.vals[a][1],sb=state.vals[b][0]*state.vals[b][1];
+    if(sb!==sa)return sb-sa;return COMPS[T[b].c].w-COMPS[T[a].c].w;
+  }).slice(0,3);
+  var ol=$('#topThreats');ol.innerHTML='';
+  order.forEach(function(i){
+    var s=state.vals[i][0]*state.vals[i][1];
+    ol.appendChild(el('li',null,'<div><div><b>'+T[i].n+'</b> <span class="chip '+level(s)+'">'+s+' з 9</span></div><div class="small">'+COMPS[T[i].c].name+'</div><p style="margin-top:4px">'+T[i].adv+'</p></div>'));
+  });
+  var t=$('#cmp');
+  t.innerHTML='<thead><tr><th>Підприємство</th><th>Ризик</th><th>Зона</th><th></th></tr></thead>';
+  var tb=el('tbody');
+  PRESETS.forEach(function(pp){
+    if(pp.id==='own')return;
+    var r=calc(pp.v);
+    var tr=el('tr',null,'<td>'+pp.name+(pp.id===state.preset&&!state.edited?' <span class="small">(зараз)</span>':'')+'</td><td class="num">'+pct(r.total)+'%</td><td><span class="chip '+(r.zone==='risk'?'risk':'safe')+'">'+(r.zone==='risk'?'Зона ризику':'Зона безпеки')+'</span></td><td><button class="btn ghost" style="padding:5px 12px" data-load="'+pp.id+'">Показати</button></td>');
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+}
+function refresh(){
+  updateScores();
+  var res=calc(state.vals);
+  var c=$('#liveChip');c.className='chip '+(res.zone==='risk'?'risk':'safe');
+  c.textContent=pct(res.total)+'% · '+(res.zone==='risk'?'зона ризику':'зона безпеки');
+  if(!$('#p-result').hidden)renderResult();
+}
+/* навігація */
+var NAMES=['factors','threats','result'];
+function show(name){
+  if(NAMES.indexOf(name)<0)name='factors';
+  NAMES.forEach(function(n){
+    $('#p-'+n).hidden=(n!==name);
+    $('#tab-'+n).setAttribute('aria-selected',n===name?'true':'false');
+  });
+  if(name==='result')renderResult();
+  if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);
+  window.scrollTo({top:0,behavior:'auto'});
+}
+document.addEventListener('click',function(e){
+  var g=e.target.closest('[data-go]');if(g){show(g.getAttribute('data-go'));return}
+  var l=e.target.closest('[data-load]');if(l){applyPreset(l.getAttribute('data-load'));renderPresets();return}
+  if(e.target.id==='restart'){applyPreset('bakery');renderPresets();show('factors')}
+});
+NAMES.forEach(function(n){$('#tab-'+n).addEventListener('click',function(){show(n)})});
+window.addEventListener('hashchange',function(){show(location.hash.slice(1))});
+renderFactors();renderPresets();renderThreats();syncControls();refresh();
+show(location.hash.slice(1)||'factors');
+})();
+</script>
+</body>
+</html>
